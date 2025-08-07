@@ -1,0 +1,2 @@
+from .pick_place_random_block import PickPlaceRandomBlockEnv
+
