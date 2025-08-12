@@ -98,7 +98,7 @@ class PickPlaceRandomBlockEnv:
         RL_state= torch.concat([obs1,obs2,obs3], dim=1)
         return RL_state
         
-    def in_place_box(self, target_position, hitbox_range_xy=0.02):
+    def in_place_box(self, target_position, hitbox_range_xy=0.5):
         cube_pos = self.cube.get_pos().to(dtype=torch.float64)
         # Check if the cube position is within the target hitbox
         lower_bound_xy = target_position[:, :2] - hitbox_range_xy
@@ -212,7 +212,6 @@ class PickPlaceRandomBlockEnv:
         RL_dones = self.in_place_box(target_position) & cube_at_rest
         RL_rewards = torch.zeros(self.num_envs, device=self.device, dtype=torch.float64)
         RL_rewards = 1/(cdft + 1)
-        
         return RL_states, RL_rewards, RL_dones
     
 if __name__ == "__main__":
