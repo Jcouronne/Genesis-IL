@@ -32,7 +32,16 @@ def create_environment(task_name):
 def train_imitation_learning(args, lr, num_layers, hidden_dim):
     # Setup checkpoints
     RL_checkpoint_path = f"logs/{args.task}_ppo_checkpoint_released.pth"
-    IL_checkpoint_path = f"logs/{args.task}_IL_checkpoint.pth"
+    
+    if args.load_path is not None:
+        load_IL = True
+        IL_checkpoint_path = f"logs/{args.task}_IL_checkpoint_released.pth"
+        print(f"Loading IL checkpoint from {IL_checkpoint_path}")
+    else:
+        load_IL = False
+        IL_checkpoint_path = f"logs/{args.task}_IL_checkpoint.pth"
+        print(f"Creating new IL checkpoint at {IL_checkpoint_path}")
+    
     os.makedirs(os.path.dirname(IL_checkpoint_path), exist_ok=True)
     
     # Create environment
@@ -50,7 +59,7 @@ def train_imitation_learning(args, lr, num_layers, hidden_dim):
         checkpoint_path=RL_checkpoint_path
     )
     
-    # Create IL agent
+    # Create IL agent - load if -l flag is used
     IL_agent = IL_Agent(
         input_dim=env.state_dim,
         output_dim=env.action_space,
@@ -58,7 +67,7 @@ def train_imitation_learning(args, lr, num_layers, hidden_dim):
         num_layers=num_layers,
         hidden_dim=hidden_dim,
         device=args.device,
-        load=args.load_IL,  # Option to load previous IL training
+        load=load_IL,  # Load if -l flag is used
         checkpoint_path=IL_checkpoint_path
     )
     
@@ -248,8 +257,8 @@ def test_IL_model(args, lr, num_layers, hidden_dim):
     print("IMITATION LEARNING MODEL TEST MODE")
     print("=" * 60)
     
-    # Setup checkpoint path
-    IL_checkpoint_path = f"logs/{args.task}_IL_checkpoint.pth"
+    # Setup checkpoint path - use _released for evaluation
+    IL_checkpoint_path = f"logs/{args.task}_IL_checkpoint_released.pth"
     
     if not os.path.exists(IL_checkpoint_path):
         print(f"Error: IL checkpoint not found at {IL_checkpoint_path}")
@@ -369,7 +378,8 @@ def plot_test_results(IL_rewards, IL_dones, args):
 def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--vis", action="store_true", default=False, help="Enable visualization") 
-    parser.add_argument("-l", "--load_IL", action="store_true", default=False, help="Load IL model and run in test mode (instead of training)")
+    parser.add_argument("-l", "--load_path", action="store_const", const="default", default=None, help="Load IL model from default checkpoint path") 
+    parser.add_argument("-e", "--evaluate", action="store_true", default=False, help="Evaluate IL model (test mode)")
     parser.add_argument("-n", "--num_envs", type=int, default=1, help="Number of environments to create") 
     parser.add_argument("-t", "--task", type=str, default="PickPlaceRandomBlock", help="Task to train/test on")
     parser.add_argument("-d", "--device", type=str, default="cuda", help="device: cpu or cuda:x or mps for macos")
@@ -381,8 +391,8 @@ if __name__ == "__main__":
     args = arg_parser()
     
     # Check if we should run in test mode
-    if args.load_IL:
-        print("Load IL flag detected - switching to test mode")
+    if args.evaluate:
+        print("Evaluate flag detected - switching to test mode")
         test_IL_model(args, lr, num_layers, hidden_dim)
     else:
         print("Starting IL training mode")
