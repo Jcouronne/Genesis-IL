@@ -9,6 +9,7 @@ import os
 import matplotlib.pyplot as plt
 from datetime import datetime
 import time
+import numpy as np
 
 num_episodes = 1000
 lr=1e-3
@@ -78,6 +79,9 @@ def train_imitation_learning(args, lr, num_layers, hidden_dim):
         IL_run(env, RL_ppo_agent, IL_agent, num_episodes)
 
 def IL_run(env, RL_ppo_agent, IL_agent, num_episodes):
+    # Add start time tracking
+    start_time = time.time()
+    
     # Training statistics
     episode_stats = []
     IL_loss_stats = []
@@ -90,6 +94,13 @@ def IL_run(env, RL_ppo_agent, IL_agent, num_episodes):
     RL_states_buffer = []
     RL_actions_buffer = []
     collect_frequency = 10  # Train IL every N episodes
+    
+    # Variance tracking
+    window_size = 10
+    
+    # Setup interactive plotting
+    plt.ion()
+    figure, axis = plt.subplots(2, 2, figsize=(15, 10))
     
     for episode in range(num_episodes):
         print("Starting episode:", episode + 1)
@@ -156,15 +167,35 @@ def IL_run(env, RL_ppo_agent, IL_agent, num_episodes):
             
             # Save IL checkpoint
             IL_agent.save_checkpoint()
+            
+            # Update plots with runtime and variance
+            if len(episode_stats) > 1:
+                # Calculate current running time
+                current_time = time.time()
+                elapsed_time = current_time - start_time
+                elapsed_minutes = int(elapsed_time // 60)
+                elapsed_seconds = int(elapsed_time % 60)
+                
+                update_IL_plots(axis, episode_stats, IL_loss_stats, RL_rewards_stats, 
+                               IL_rewards_stats, IL_done_stats, RL_done_stats, 
+                               lr, num_layers, hidden_dim, elapsed_minutes, elapsed_seconds)
         
         if episode % 50 == 0 or episode == num_episodes - 1:
             # Periodic testing
             print(f"Testing IL agent at episode {episode}...")
             test_IL_performance(IL_agent, env, verbose=True)
     
-    # Plot results
+    # Calculate final running time
+    final_time = time.time()
+    total_elapsed = final_time - start_time
+    total_minutes = int(total_elapsed // 60)
+    total_seconds = int(total_elapsed % 60)
+    
+    # Turn off interactive mode and plot final results
+    plt.ioff()
     plot_IL_results(episode_stats, IL_loss_stats, RL_rewards_stats, IL_rewards_stats, 
-                   IL_done_stats, RL_done_stats, lr, num_layers, hidden_dim)
+                   IL_done_stats, RL_done_stats, lr, num_layers, hidden_dim, 
+                   total_minutes, total_seconds)
 
 def test_IL_performance(IL_agent, env, num_test_episodes=3, verbose=False):
     """Test IL agent performance during training"""
@@ -203,52 +234,233 @@ def test_IL_performance(IL_agent, env, num_test_episodes=3, verbose=False):
 
     return IL_avg_reward, IL_avg_completion
 
-def plot_IL_results(episodes, losses, RL_rewards, IL_rewards, IL_done_rates, RL_done_rates, lr, num_layers, hidden_dim):
-    """Plot IL training results"""
-    figure, axis = plt.subplots(2, 2, figsize=(15, 10))
+def update_IL_plots(axis, episodes, losses, RL_rewards, IL_rewards, IL_done_rates, RL_done_rates,
+                    lr, num_layers, hidden_dim, elapsed_minutes, elapsed_seconds):
+    """Update real-time IL training plots with variance bands"""
     
-    # Plot IL training loss
-    axis[0,0].plot(episodes, losses, color='b', label='IL Loss')
+    # Clear all subplots
+    for ax in axis.flat:
+        ax.clear()
+    
+    # Convert to numpy for easier manipulation
+    episodes_np = np.array(episodes)
+    losses_np = np.array(losses)
+    RL_rewards_np = np.array(RL_rewards)
+    IL_rewards_np = np.array(IL_rewards)
+    IL_done_rates_np = np.array(IL_done_rates)
+    RL_done_rates_np = np.array(RL_done_rates)
+    
+    # Calculate variance bands
+    window_size = min(5, len(episodes))  # Adaptive window size
+    
+    def calculate_std_bands(data_list, window_size):
+        std_bands = []
+        for i in range(len(data_list)):
+            start_idx = max(0, i - window_size//2)
+            end_idx = min(len(data_list), i + window_size//2 + 1)
+            
+            if end_idx - start_idx > 1:
+                window_data = data_list[start_idx:end_idx]
+                std_bands.append(np.std(window_data))
+            else:
+                std_bands.append(0)
+        return np.array(std_bands)
+    
+    # Calculate std bands for all metrics
+    losses_std = calculate_std_bands(losses, window_size)
+    RL_rewards_std = calculate_std_bands(RL_rewards, window_size)
+    IL_rewards_std = calculate_std_bands(IL_rewards, window_size)
+    IL_done_std = calculate_std_bands(IL_done_rates, window_size)
+    
+    # Plot 1: IL training loss with variance
+    axis[0,0].plot(episodes_np, losses_np, color='b', linewidth=2, label='IL Loss')
+    axis[0,0].fill_between(episodes_np, 
+                          losses_np - losses_std, 
+                          losses_np + losses_std, 
+                          color='b', alpha=0.3, label='±1 STD')
     axis[0,0].set_title('IL Training Loss')
     axis[0,0].set_xlabel('Episode')
     axis[0,0].set_ylabel('Loss')
     axis[0,0].legend()
+    axis[0,0].grid(True, alpha=0.3)
     
-    # Plot RL vs IL rewards
-    axis[0,1].plot(episodes, RL_rewards, color='g', label='Expert Reward')
-    axis[0,1].plot(episodes, IL_rewards, color='r', label='IL Reward')
+    # Plot 2: RL vs IL rewards with variance
+    axis[0,1].plot(episodes_np, RL_rewards_np, color='g', linewidth=2, label='Expert Reward')
+    axis[0,1].fill_between(episodes_np, 
+                          RL_rewards_np - RL_rewards_std, 
+                          RL_rewards_np + RL_rewards_std, 
+                          color='g', alpha=0.3)
+    axis[0,1].plot(episodes_np, IL_rewards_np, color='r', linewidth=2, label='IL Reward')
+    axis[0,1].fill_between(episodes_np, 
+                          IL_rewards_np - IL_rewards_std, 
+                          IL_rewards_np + IL_rewards_std, 
+                          color='r', alpha=0.3)
     axis[0,1].set_title('Expert vs IL Performance')
     axis[0,1].set_xlabel('Episode')
     axis[0,1].set_ylabel('Reward')
     axis[0,1].legend()
+    axis[0,1].grid(True, alpha=0.3)
     
-    # Plot reward difference
-    reward_diff = [RL - IL for RL, IL in zip(RL_rewards, IL_rewards)]
-    axis[1,0].plot(episodes, reward_diff, color='orange', label='Performance Gap')
+    # Plot 3: Performance gap with variance
+    reward_diff = [(RL - IL)**2 for RL, IL in zip(RL_rewards, IL_rewards)]
+    reward_diff_np = np.array(reward_diff)
+    diff_std = calculate_std_bands(reward_diff, window_size)
+    
+    axis[1,0].plot(episodes_np, reward_diff_np, color='orange', linewidth=2, label='Performance Gap')
+    axis[1,0].fill_between(episodes_np, 
+                          reward_diff_np - diff_std, 
+                          reward_diff_np + diff_std, 
+                          color='orange', alpha=0.3, label='±1 STD')
     axis[1,0].set_title('Expert-IL Performance Gap')
     axis[1,0].set_xlabel('Episode')
-    axis[1,0].set_ylabel('Reward Difference')
+    axis[1,0].set_ylabel('Reward Difference²')
     axis[1,0].legend()
+    axis[1,0].grid(True, alpha=0.3)
     
-    # Plot completion rates (both RL and IL)
-    if len(IL_done_rates) > 0 or len(RL_done_rates) > 0:
-        if len(RL_done_rates) > 0:
-            axis[1,1].plot(episodes, RL_done_rates, color='green', label='Expert (RL) Completion Rate')
-        if len(IL_done_rates) > 0:
-            axis[1,1].plot(episodes, IL_done_rates, color='purple', label='IL Completion Rate')
-        axis[1,1].set_title('Task Completion Rates Comparison')
-        axis[1,1].set_xlabel('Episode')
-        axis[1,1].set_ylabel('Completion Rate (%)')
-        axis[1,1].set_ylim(0, 100)
-        axis[1,1].grid(True, alpha=0.3)
-        axis[1,1].legend()
+    # Plot 4: Completion rates with variance
+    if len(RL_done_rates) > 0:
+        RL_done_std = calculate_std_bands(RL_done_rates, window_size)
+        axis[1,1].plot(episodes_np, RL_done_rates_np, color='green', linewidth=2, label='Expert (RL) Completion Rate')
+        axis[1,1].fill_between(episodes_np, 
+                              RL_done_rates_np - RL_done_std, 
+                              RL_done_rates_np + RL_done_std, 
+                              color='green', alpha=0.3)
     
-    plt.suptitle(f"Imitation Learning - LR: {lr}, Layers: {num_layers}, Hidden: {hidden_dim}")
+    if len(IL_done_rates) > 0:
+        axis[1,1].plot(episodes_np, IL_done_rates_np, color='purple', linewidth=2, label='IL Completion Rate')
+        axis[1,1].fill_between(episodes_np, 
+                              IL_done_rates_np - IL_done_std, 
+                              IL_done_rates_np + IL_done_std, 
+                              color='purple', alpha=0.3)
+    
+    axis[1,1].set_title('Task Completion Rates Comparison')
+    axis[1,1].set_xlabel('Episode')
+    axis[1,1].set_ylabel('Completion Rate (%)')
+    axis[1,1].set_ylim(0, 100)
+    axis[1,1].grid(True, alpha=0.3)
+    axis[1,1].legend()
+    
+    plt.suptitle(f"Runtime: {elapsed_minutes}m {elapsed_seconds}s - Imitation Learning - LR: {lr}, Layers: {num_layers}, Hidden: {hidden_dim}")
+    plt.tight_layout()
+    plt.pause(0.01)
+
+def plot_IL_results(episodes, losses, RL_rewards, IL_rewards, IL_done_rates, RL_done_rates, 
+                   lr, num_layers, hidden_dim, total_minutes=None, total_seconds=None):
+    """Plot final IL training results with variance bands"""
+    figure = plt.figure(figsize=(15, 10))
+    
+    # Convert to numpy for easier manipulation
+    episodes_np = np.array(episodes)
+    losses_np = np.array(losses)
+    RL_rewards_np = np.array(RL_rewards)
+    IL_rewards_np = np.array(IL_rewards)
+    IL_done_rates_np = np.array(IL_done_rates)
+    RL_done_rates_np = np.array(RL_done_rates)
+    
+    # Calculate final variance bands
+    window_size = min(10, len(episodes))
+    
+    def calculate_final_std_bands(data_list, window_size):
+        std_bands = []
+        for i in range(len(data_list)):
+            start_idx = max(0, i - window_size//2)
+            end_idx = min(len(data_list), i + window_size//2 + 1)
+            
+            if end_idx - start_idx > 1:
+                window_data = data_list[start_idx:end_idx]
+                std_bands.append(np.std(window_data))
+            else:
+                std_bands.append(0)
+        return np.array(std_bands)
+    
+    # Calculate final std bands
+    final_losses_std = calculate_final_std_bands(losses, window_size)
+    final_RL_rewards_std = calculate_final_std_bands(RL_rewards, window_size)
+    final_IL_rewards_std = calculate_final_std_bands(IL_rewards, window_size)
+    final_IL_done_std = calculate_final_std_bands(IL_done_rates, window_size)
+    
+    # Plot 1: Final IL training loss with variance
+    plt.subplot(2, 2, 1)
+    plt.plot(episodes_np, losses_np, color='b', linewidth=2, label='IL Loss')
+    plt.fill_between(episodes_np, 
+                          losses_np - final_losses_std, 
+                          losses_np + final_losses_std, 
+                          color='b', alpha=0.3, label='±1 STD')
+    plt.title('Final IL Training Loss')
+    plt.xlabel('Episode')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Plot 2: Final RL vs IL rewards with variance
+    plt.subplot(2, 2, 2)
+    plt.plot(episodes_np, RL_rewards_np, color='g', linewidth=2, label='Expert Reward')
+    plt.fill_between(episodes_np, 
+                          RL_rewards_np - final_RL_rewards_std, 
+                          RL_rewards_np + final_RL_rewards_std, 
+                          color='g', alpha=0.3)
+    plt.plot(episodes_np, IL_rewards_np, color='r', linewidth=2, label='IL Reward')
+    plt.fill_between(episodes_np, 
+                          IL_rewards_np - final_IL_rewards_std, 
+                          IL_rewards_np + final_IL_rewards_std, 
+                          color='r', alpha=0.3)
+    plt.title('Final Expert vs IL Performance')
+    plt.xlabel('Episode')
+    plt.ylabel('Reward')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Plot 3: Final performance gap with variance
+    plt.subplot(2, 2, 3)
+    reward_diff = [(RL - IL)**2 for RL, IL in zip(RL_rewards, IL_rewards)]
+    reward_diff_np = np.array(reward_diff)
+    final_diff_std = calculate_final_std_bands(reward_diff, window_size)
+    
+    plt.plot(episodes_np, reward_diff_np, color='orange', linewidth=2, label='Performance Gap')
+    plt.fill_between(episodes_np, 
+                          reward_diff_np - final_diff_std, 
+                          reward_diff_np + final_diff_std, 
+                          color='orange', alpha=0.3, label='±1 STD')
+    plt.title('Final Expert-IL Performance Gap')
+    plt.xlabel('Episode')
+    plt.ylabel('Reward Difference²')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Plot 4: Final completion rates with variance
+    plt.subplot(2, 2, 4)
+    if len(RL_done_rates) > 0:
+        final_RL_done_std = calculate_final_std_bands(RL_done_rates, window_size)
+        plt.plot(episodes_np, RL_done_rates_np, color='green', linewidth=2, label='Expert (RL) Completion Rate')
+        plt.fill_between(episodes_np, 
+                              RL_done_rates_np - final_RL_done_std, 
+                              RL_done_rates_np + final_RL_done_std, 
+                              color='green', alpha=0.3)
+    
+    if len(IL_done_rates) > 0:
+        plt.plot(episodes_np, IL_done_rates_np, color='purple', linewidth=2, label='IL Completion Rate')
+        plt.fill_between(episodes_np, 
+                              IL_done_rates_np - final_IL_done_std, 
+                              IL_done_rates_np + final_IL_done_std, 
+                              color='purple', alpha=0.3)
+    
+    plt.title('Final Task Completion Rates Comparison')
+    plt.xlabel('Episode')
+    plt.ylabel('Completion Rate (%)')
+    plt.ylim(0, 100)
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    
+    # Add total runtime to title if provided
+    if total_minutes is not None and total_seconds is not None:
+        plt.suptitle(f"Final Results - Total Runtime: {total_minutes}m {total_seconds}s - Imitation Learning - LR: {lr}, Layers: {num_layers}, Hidden: {hidden_dim}")
+    else:
+        plt.suptitle(f"Imitation Learning - LR: {lr}, Layers: {num_layers}, Hidden: {hidden_dim}")
     
     ts = time.time()
     timestamp = datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
     os.makedirs("/home/devtex/Documents/Genesis/graphs", exist_ok=True)
-    plt.savefig(f"/home/devtex/Documents/Genesis/graphs/IL_{timestamp}.png")
+    plt.savefig(f"/home/devtex/Documents/Genesis/graphs/IL_{timestamp}.png", dpi=300, bbox_inches='tight')
     plt.show()
 
 def test_IL_model(args, lr, num_layers, hidden_dim):
@@ -283,14 +495,11 @@ def test_IL_model(args, lr, num_layers, hidden_dim):
     
     print(f"Loaded IL agent from: {IL_checkpoint_path}")
     
-    # Run simple test
     run_IL_test_suite(env, IL_agent, args)
 
 def run_IL_test_suite(env, IL_agent, args):
-    """Run test suite for IL model - 50 episodes with reward and completion tracking"""
+    """Run test suite for IL model - 50 episodes"""
     print("\n" + "-" * 40)
-    print("Running IL Test - 50 Episodes")
-    print("-" * 40)
     
     # Simple test: 50 episodes
     episode_rewards, episode_completions = test_IL_simple_performance(IL_agent, env, args, num_episodes=50)
@@ -330,7 +539,6 @@ def test_IL_simple_performance(IL_agent, env, args, num_episodes=50):
                 break
         
         episode_rewards.append(IL_total_reward)
-        # Calculate completion rate based on actual dones (matching environment pattern)
         completion_rate = (IL_done_array.sum().item() / env.num_envs) * 100.0
         episode_completions.append(completion_rate)
         
@@ -340,23 +548,55 @@ def test_IL_simple_performance(IL_agent, env, args, num_episodes=50):
     return episode_rewards, episode_completions
 
 def plot_test_results(IL_rewards, IL_dones, args):
-    """Plot test results"""
+    """Plot test results with variance bands"""
     figure, axes = plt.subplots(1, 2, figsize=(12, 5))
 
     episodes = range(1, len(IL_rewards)+1)
+    episodes_np = np.array(episodes)
+    IL_rewards_np = np.array(IL_rewards)
+    IL_dones_np = np.array(IL_dones)
+    
+    # Calculate variance bands for test results
+    window_size = min(5, len(episodes))
+    
+    def calculate_test_std_bands(data_list, window_size):
+        std_bands = []
+        for i in range(len(data_list)):
+            start_idx = max(0, i - window_size//2)
+            end_idx = min(len(data_list), i + window_size//2 + 1)
+            
+            if end_idx - start_idx > 1:
+                window_data = data_list[start_idx:end_idx]
+                std_bands.append(np.std(window_data))
+            else:
+                std_bands.append(0)
+        return np.array(std_bands)
+    
+    rewards_std = calculate_test_std_bands(IL_rewards, window_size)
+    dones_std = calculate_test_std_bands(IL_dones, window_size)
 
-    # Plot 1: Episode Rewards
-    axes[0].plot(episodes, IL_rewards, color='blue', alpha=0.7, linewidth=1.5)
-    axes[0].axhline(y=sum(IL_rewards)/len(IL_rewards), color='red', linestyle='--', label=f'Average: {sum(IL_rewards)/len(IL_rewards):.1f}')
+    # Plot 1: Episode Rewards with variance
+    axes[0].plot(episodes_np, IL_rewards_np, color='blue', linewidth=2, alpha=0.8)
+    axes[0].fill_between(episodes_np, 
+                        IL_rewards_np - rewards_std, 
+                        IL_rewards_np + rewards_std, 
+                        color='blue', alpha=0.3, label='±1 STD')
+    axes[0].axhline(y=sum(IL_rewards)/len(IL_rewards), color='red', linestyle='--', 
+                   label=f'Average: {sum(IL_rewards)/len(IL_rewards):.1f}')
     axes[0].set_title('IL Agent - Episode Rewards')
     axes[0].set_xlabel('Episode')
     axes[0].set_ylabel('Reward')
     axes[0].legend()
     axes[0].grid(True, alpha=0.3)
     
-    # Plot 2: Episode Completion Rates
-    axes[1].plot(episodes, IL_dones, color='green', alpha=0.7, linewidth=1.5)
-    axes[1].axhline(y=sum(IL_dones)/len(IL_dones), color='red', linestyle='--', label=f'Average: {sum(IL_dones)/len(IL_dones):.1f}%')
+    # Plot 2: Episode Completion Rates with variance
+    axes[1].plot(episodes_np, IL_dones_np, color='green', linewidth=2, alpha=0.8)
+    axes[1].fill_between(episodes_np, 
+                        IL_dones_np - dones_std, 
+                        IL_dones_np + dones_std, 
+                        color='green', alpha=0.3, label='±1 STD')
+    axes[1].axhline(y=sum(IL_dones)/len(IL_dones), color='red', linestyle='--', 
+                   label=f'Average: {sum(IL_dones)/len(IL_dones):.1f}%')
     axes[1].set_title('IL Agent - Episode Completion Rates')
     axes[1].set_xlabel('Episode')
     axes[1].set_ylabel('Completion Rate (%)')
@@ -364,15 +604,15 @@ def plot_test_results(IL_rewards, IL_dones, args):
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
     
-    plt.suptitle(f"Simple IL Test Results - Task: {args.task}")
+    plt.suptitle(f"IL Test Results - Task: {args.task}")
     plt.tight_layout()
     
     # Save the plot
     ts = time.time()
     timestamp = datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
-    os.makedirs("/home/devtex/Documents/Genesis/graphs", exist_ok=True)
-    plt.savefig(f"/home/devtex/Documents/Genesis/graphs/IL_simple_test_{timestamp}.png", dpi=300, bbox_inches='tight')
-    print(f"\nPlot saved to: /home/devtex/Documents/Genesis/graphs/IL_simple_test_{timestamp}.png")
+    os.makedirs("graphs", exist_ok=True)
+    plt.savefig(f"graphs/{timestamp}.png", dpi=300, bbox_inches='tight')
+    print(f"\nPlot saved to: graphs/IL_test_{timestamp}.png")
     plt.show()
 
 def arg_parser():
@@ -390,7 +630,6 @@ def arg_parser():
 if __name__ == "__main__":
     args = arg_parser()
     
-    # Check if we should run in test mode
     if args.evaluate:
         print("Evaluate flag detected - switching to test mode")
         test_IL_model(args, lr, num_layers, hidden_dim)
