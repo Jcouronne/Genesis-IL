@@ -5,7 +5,7 @@ Original repo: https://github.com/RochelleNi/GenesisEnvs
 
 ## Overview
 
-This repository implements Imitation Learning using behavioral cloning from expert RL demonstrations in the Genesis physics engine.
+This repository implements Imitation Learning using behavioral cloning from expert RL demonstrations in the Genesis physics engine. <br>
 Only the scenario "PickPlaceRandomBlock" has been fine tuned and trained.
 
 ## Installation
