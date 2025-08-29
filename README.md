@@ -1,11 +1,12 @@
-# Genesis Imitation Learning (IL) Framework
+# Genesis Imitation Learning (IL), Behavioral Cloning Framework
 
-Genesis engine : https://genesis-world.readthedocs.io/en/latest/index.html
+Genesis engine : https://genesis-world.readthedocs.io/en/latest/index.html <br>
 Original repo: https://github.com/RochelleNi/GenesisEnvs
 
 ## Overview
 
-This repository implements Imitation Learning using behavioral cloning from expert RL demonstrations in the Genesis physics engine.
+This repository implements Imitation Learning using behavioral cloning from expert RL demonstrations in the Genesis physics engine. <br>
+Only the scenario "PickPlaceRandomBlock" has been fine tuned and trained.
 
 ## Installation
 
@@ -46,11 +47,12 @@ python IL_run_ppo.py -n 10 -t PickPlaceRandomBlock
 ```
 *Default task: PickPlaceRandomBlock*
 
-Load a pre-trained model with `-l`:
+Load a pre-trained model with `-l directory`:
 ```bash
-python IL_run_ppo.py -n 10 -l
+python run_ppo.py -n 10 -l
 ```
-*Note: Files must be marked with "_released" (e.g., PickPlaceRandomBlock_IL_checkpoint_released.pth)*
+*Default directory: logs folder* <br>
+*Note: Files must be marked with "_released" (e.g., PickPlaceRandomBlock_ppo_checkpoint_released.pth)*
 
 ### Evaluation
 
