@@ -11,7 +11,7 @@ from datetime import datetime
 import time
 import numpy as np
 
-num_episodes = 1000
+num_episodes = 200
 lr=1e-3
 gamma=0.99
 clip_epsilon=0.15
@@ -459,8 +459,8 @@ def plot_IL_results(episodes, losses, RL_rewards, IL_rewards, IL_done_rates, RL_
     
     ts = time.time()
     timestamp = datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
-    os.makedirs("/home/devtex/Documents/Genesis/graphs", exist_ok=True)
-    plt.savefig(f"/home/devtex/Documents/Genesis/graphs/IL_{timestamp}.png", dpi=300, bbox_inches='tight')
+    os.makedirs("graphs", exist_ok=True)
+    plt.savefig(f"graphs/{timestamp}.png", dpi=300, bbox_inches='tight')
     plt.show()
 
 def test_IL_model(args, lr, num_layers, hidden_dim):
@@ -528,7 +528,7 @@ def test_IL_simple_performance(IL_agent, env, args, num_episodes=50):
         IL_total_reward = 0
         IL_done_array = torch.tensor([False] * env.num_envs).to(args.device)
         
-        for step in range(5):
+        for step in range(10):
             IL_action = IL_agent.select_action(IL_state)
             IL_next_state, IL_reward, IL_done = env.step(IL_action)
             IL_total_reward += IL_reward.sum().item()
