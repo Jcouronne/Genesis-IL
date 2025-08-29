@@ -1,4 +1,4 @@
-# Genesis Imitation Learning (IL) Framework
+# Genesis Imitation Learning (IL), Behavioral Cloning Framework
 
 Genesis engine : https://genesis-world.readthedocs.io/en/latest/index.html
 Original repo: https://github.com/RochelleNi/GenesisEnvs
