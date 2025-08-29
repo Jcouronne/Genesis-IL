@@ -47,11 +47,12 @@ python IL_run_ppo.py -n 10 -t PickPlaceRandomBlock
 ```
 *Default task: PickPlaceRandomBlock*
 
-Load a pre-trained model with `-l`:
+Load a pre-trained model with `-l directory`:
 ```bash
-python IL_run_ppo.py -n 10 -l
+python run_ppo.py -n 10 -l
 ```
-*Note: Files must be marked with "_released" (e.g., PickPlaceRandomBlock_IL_checkpoint_released.pth)*
+*Default directory: logs folder*
+*Note: Files must be marked with "_released" (e.g., PickPlaceRandomBlock_ppo_checkpoint_released.pth)*
 
 ### Evaluation
 
