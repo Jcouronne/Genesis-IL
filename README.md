@@ -112,23 +112,22 @@ IL_run_ppo.py
     - Periodically saves models and logs
 
 ### `algo/`
-- **IL_agent.py** (and possibly others)
+- **IL_agent.py**
   - **ILAgent class:**
-    - `__init__`: Initializes agent, neural network, optimizer, loads checkpoints/demos
-    - `save_checkpoint`: Persists model and optimizer state
+    - `__init__`: Initializes agent, neural network, optimizer, loads checkpoints
+    - `save_checkpoint`: Save model and optimizer state
     - `load_checkpoint`: Restores agent state from file
     - `select_action(state)`: Returns an action given current state (policy derived from imitation)
     - `train(states, actions)`: Updates the policy based on demonstration data
 
 ### `network/`
 - **Neural network architectures for IL**
-  - E.g., Behavioral Cloning (BC), GAIL, or custom IL networks
   - Configurable depth/width, activation functions
   - `forward(x)`: Computes action logits or policy outputs
 
 ### `env/`
 - **Each file (e.g., grasp_fixed_block.py, pick_place_fixed_block.py, etc.)**
-  - Defines an environment class inheriting from a base
+  - Defines an environment class
     - `__init__(vis, device, num_envs)`: Scene/entity setup
     - `build_env()`: 3D scene and actuator setup
     - `reset()`: Resets environment for a new episode
@@ -167,7 +166,7 @@ IL_run_ppo.py
   - Uses selected network architecture for policy
 
 - `env/`
-  - Each environment uses Genesis SDK (gs), numpy, torch, and utility functions as needed
+  - Each environment uses Genesis SDK, numpy, torch, and utility functions as needed
 
 ---
 
