@@ -6,8 +6,8 @@ Original repo: https://github.com/RochelleNi/GenesisEnvs
 ## Overview
 
 This repository implements Behevioral cloning in the Genesis physics engine. <br>
-It relies on the Genesis-RL repo : https://github.com/Jcouronne/Genesis-RL to train the expert agent policy.
-Note that only the scenario "PickPlaceRandomBlock" has been fine tuned and trained.
+It relies on the Genesis-RL repo : https://github.com/Jcouronne/Genesis-RL to train the expert agent policy. <br>
+Note that only the scenario "PickPlaceRandomBlock" has been fine tuned and trained. <br>
 ![](https://github.com/Jcouronne/Genesis-RL/blob/main/graphs/task_video.gif)
 
 ## Installation
