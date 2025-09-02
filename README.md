@@ -5,22 +5,27 @@ Original repo: https://github.com/RochelleNi/GenesisEnvs
 
 ## Overview
 
-This repository implements Imitation Learning using behavioral cloning from expert RL demonstrations in the Genesis physics engine. <br>
+This repository implements Proximal Policy Optimization (PPO) reinforcement learning in the Genesis physics engine. <br>
 Only the scenario "PickPlaceRandomBlock" has been fine tuned and trained.
-![](https://github.com/Jcouronne/Genesis-IL/blob/main/graphs/task_video.gif)
+![](https://github.com/Jcouronne/Genesis-RL/blob/main/graphs/task_video.gif)
 
 ## Installation
 
 ### Prerequisites
 
-Genesis officially supports Windows, Mac, and Linux. Since this repository was created using Ubuntu, the following installation guide should be easier to follow if you are on Ubuntu. Otherwise, follow the instructions on the Genesis website linked above.
+Genesis officially supports Windows, Mac, and Linux. Since this repository was created using Ubuntu 22.04.5, the following installation guide should be easier to follow if you are on Ubuntu. Otherwise, follow the instructions on the Genesis website : https://genesis-world.readthedocs.io/en/latest/user_guide/overview/installation.html
 
 Creating a Python virtual environment is highly recommended to avoid version mismatches in modules.  
 Tutorial for creating virtual environments: https://www.youtube.com/watch?v=hrnN2BRfIXE
 
 ### Installation Steps
+1. **Install Python**:
+   ```bash
+   sudo apt install python3.10
+   ```
+   *Genesis supports Python: >=3.10,<3.14*
 
-1. **Install PyTorch**:
+2. **Install PyTorch**:
    Follow the official guide: https://pytorch.org/get-started/locally/ (copy the command you need)
    
    Check your CUDA version:
@@ -28,7 +33,7 @@ Tutorial for creating virtual environments: https://www.youtube.com/watch?v=hrnN
    nvidia-smi
    ```
 
-2. **Install dependencies**:
+3. **Install additional dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
@@ -41,6 +46,7 @@ Run the following to start training :
 ```bash
 python IL_run_ppo.py -n 10
 ```
+*Use -n int to choose the number of environments running in parallel*
 
 Specify a task with `-t taskname`:
 ```bash
