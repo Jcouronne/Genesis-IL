@@ -290,12 +290,12 @@ def update_IL_plots(axis, episodes, losses, RL_rewards, IL_rewards, IL_done_rate
                           RL_rewards_np - RL_rewards_std, 
                           RL_rewards_np + RL_rewards_std, 
                           color='g', alpha=0.3)
-    axis[0,1].plot(episodes_np, IL_rewards_np, color='r', linewidth=2, label='IL Reward')
+    axis[0,1].plot(episodes_np, IL_rewards_np, color='r', linewidth=2, label='Learner Reward')
     axis[0,1].fill_between(episodes_np, 
                           IL_rewards_np - IL_rewards_std, 
                           IL_rewards_np + IL_rewards_std, 
                           color='r', alpha=0.3)
-    axis[0,1].set_title('Expert vs IL Performance')
+    axis[0,1].set_title('Expert vs Learner Performance')
     axis[0,1].set_xlabel('Episode')
     axis[0,1].set_ylabel('Reward')
     axis[0,1].legend()
@@ -311,7 +311,7 @@ def update_IL_plots(axis, episodes, losses, RL_rewards, IL_rewards, IL_done_rate
                           reward_diff_np - diff_std, 
                           reward_diff_np + diff_std, 
                           color='orange', alpha=0.3, label='±1 STD')
-    axis[1,0].set_title('Expert-IL Performance Gap')
+    axis[1,0].set_title('Expert-Learner Performance Gap')
     axis[1,0].set_xlabel('Episode')
     axis[1,0].set_ylabel('Reward Difference²')
     axis[1,0].legend()
@@ -327,7 +327,7 @@ def update_IL_plots(axis, episodes, losses, RL_rewards, IL_rewards, IL_done_rate
                               color='green', alpha=0.3)
     
     if len(IL_done_rates) > 0:
-        axis[1,1].plot(episodes_np, IL_done_rates_np, color='purple', linewidth=2, label='IL Completion Rate')
+        axis[1,1].plot(episodes_np, IL_done_rates_np, color='purple', linewidth=2, label='Learner Completion Rate')
         axis[1,1].fill_between(episodes_np, 
                               IL_done_rates_np - IL_done_std, 
                               IL_done_rates_np + IL_done_std, 
