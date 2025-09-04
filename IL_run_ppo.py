@@ -278,7 +278,7 @@ def update_IL_plots(axis, episodes, losses, RL_rewards, IL_rewards, IL_done_rate
                           losses_np - losses_std, 
                           losses_np + losses_std, 
                           color='b', alpha=0.3, label='±1 STD')
-    axis[0,0].set_title('IL Training Loss')
+    axis[0,0].set_title('Learner Training Loss')
     axis[0,0].set_xlabel('Episode')
     axis[0,0].set_ylabel('Loss')
     axis[0,0].legend()
@@ -381,12 +381,12 @@ def plot_IL_results(episodes, losses, RL_rewards, IL_rewards, IL_done_rates, RL_
     
     # Plot 1: Final IL training loss with variance
     plt.subplot(2, 2, 1)
-    plt.plot(episodes_np, losses_np, color='b', linewidth=2, label='IL Loss')
+    plt.plot(episodes_np, losses_np, color='b', linewidth=2, label='Learner Loss')
     plt.fill_between(episodes_np, 
                           losses_np - final_losses_std, 
                           losses_np + final_losses_std, 
                           color='b', alpha=0.3, label='±1 STD')
-    plt.title('Final IL Training Loss')
+    plt.title('Learner Training Loss')
     plt.xlabel('Episode')
     plt.ylabel('Loss')
     plt.legend()
@@ -399,12 +399,12 @@ def plot_IL_results(episodes, losses, RL_rewards, IL_rewards, IL_done_rates, RL_
                           RL_rewards_np - final_RL_rewards_std, 
                           RL_rewards_np + final_RL_rewards_std, 
                           color='g', alpha=0.3)
-    plt.plot(episodes_np, IL_rewards_np, color='r', linewidth=2, label='IL Reward')
+    plt.plot(episodes_np, IL_rewards_np, color='r', linewidth=2, label='Learner Reward')
     plt.fill_between(episodes_np, 
                           IL_rewards_np - final_IL_rewards_std, 
                           IL_rewards_np + final_IL_rewards_std, 
                           color='r', alpha=0.3)
-    plt.title('Final Expert vs IL Performance')
+    plt.title('Final Expert vs Learner Performance')
     plt.xlabel('Episode')
     plt.ylabel('Reward')
     plt.legend()
@@ -421,7 +421,7 @@ def plot_IL_results(episodes, losses, RL_rewards, IL_rewards, IL_done_rates, RL_
                           reward_diff_np - final_diff_std, 
                           reward_diff_np + final_diff_std, 
                           color='orange', alpha=0.3, label='±1 STD')
-    plt.title('Final Expert-IL Performance Gap')
+    plt.title('Expert-Learner Performance Gap')
     plt.xlabel('Episode')
     plt.ylabel('Reward Difference²')
     plt.legend()
@@ -438,7 +438,7 @@ def plot_IL_results(episodes, losses, RL_rewards, IL_rewards, IL_done_rates, RL_
                               color='green', alpha=0.3)
     
     if len(IL_done_rates) > 0:
-        plt.plot(episodes_np, IL_done_rates_np, color='purple', linewidth=2, label='IL Completion Rate')
+        plt.plot(episodes_np, IL_done_rates_np, color='purple', linewidth=2, label='Learner Completion Rate')
         plt.fill_between(episodes_np, 
                               IL_done_rates_np - final_IL_done_std, 
                               IL_done_rates_np + final_IL_done_std, 
@@ -583,7 +583,7 @@ def plot_test_results(IL_rewards, IL_dones, args):
                         color='blue', alpha=0.3, label='±1 STD')
     axes[0].axhline(y=sum(IL_rewards)/len(IL_rewards), color='red', linestyle='--', 
                    label=f'Average: {sum(IL_rewards)/len(IL_rewards):.1f}')
-    axes[0].set_title('IL Agent - Episode Rewards')
+    axes[0].set_title('Learner Agent - Episode Rewards')
     axes[0].set_xlabel('Episode')
     axes[0].set_ylabel('Reward')
     axes[0].legend()
@@ -597,14 +597,14 @@ def plot_test_results(IL_rewards, IL_dones, args):
                         color='green', alpha=0.3, label='±1 STD')
     axes[1].axhline(y=sum(IL_dones)/len(IL_dones), color='red', linestyle='--', 
                    label=f'Average: {sum(IL_dones)/len(IL_dones):.1f}%')
-    axes[1].set_title('IL Agent - Episode Completion Rates')
+    axes[1].set_title('Learner Agent - Episode Completion Rates')
     axes[1].set_xlabel('Episode')
     axes[1].set_ylabel('Completion Rate (%)')
     axes[1].set_ylim(0, 100)
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
     
-    plt.suptitle(f"IL Test Results - Task: {args.task}")
+    plt.suptitle(f"Learner Test Results - Task: {args.task}")
     plt.tight_layout()
     
     # Save the plot
