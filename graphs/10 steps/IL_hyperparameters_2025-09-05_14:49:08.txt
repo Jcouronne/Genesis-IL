@@ -1,0 +1,13 @@
+=== Imitation Learning Training Hyperparameters ===
+Training Started: 2025-09-05_14:49:08
+
+Learning Rate: 0.001
+Gamma: 0.99
+Clip Epsilon: 0.15
+Number of Layers: 12
+Hidden Dimension: 32
+Number of Episodes: 200
+Number of Environments: 30
+Task: PickPlaceRandomBlock
+Device: cuda
+Collection Frequency: 10

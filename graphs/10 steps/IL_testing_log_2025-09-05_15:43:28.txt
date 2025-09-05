@@ -1,0 +1,74 @@
+=== Imitation Learning Testing Log ===
+Testing Started: 2025-09-05 15:43:28
+Task: PickPlaceRandomBlock
+Number of Environments: 30
+Total Test Episodes: 50
+Device: cuda
+
+============================================================
+DETAILED EPISODE RESULTS
+============================================================
+Episode,Reward,Completion_Rate(%),Steps_Taken,Notes
+1,247.8338,96.67,10,Full_Episode
+2,101.7018,100.00,5,Early_Termination
+3,241.5303,90.00,10,Full_Episode
+4,128.8451,100.00,6,Early_Termination
+5,247.2893,96.67,10,Full_Episode
+6,102.4398,100.00,5,Early_Termination
+7,101.8098,100.00,5,Early_Termination
+8,132.3215,100.00,6,Early_Termination
+9,245.5560,96.67,10,Full_Episode
+10,101.4641,100.00,5,Early_Termination
+11,73.7821,100.00,4,Early_Termination
+12,245.1728,93.33,10,Full_Episode
+13,101.6797,100.00,5,Early_Termination
+14,101.9652,100.00,5,Early_Termination
+15,247.8017,96.67,10,Full_Episode
+16,129.7603,100.00,6,Early_Termination
+17,72.0512,100.00,4,Early_Termination
+18,246.2910,96.67,10,Full_Episode
+19,129.7532,100.00,6,Early_Termination
+20,101.8550,100.00,5,Early_Termination
+21,101.6794,100.00,5,Early_Termination
+22,247.0782,96.67,10,Full_Episode
+23,244.3392,93.33,10,Full_Episode
+24,72.9545,100.00,4,Early_Termination
+25,243.7469,93.33,10,Full_Episode
+26,247.5789,96.67,10,Full_Episode
+27,72.0083,100.00,4,Early_Termination
+28,244.9325,96.67,10,Full_Episode
+29,243.6329,96.67,10,Full_Episode
+30,247.4170,96.67,10,Full_Episode
+31,247.9561,96.67,10,Full_Episode
+32,246.7135,96.67,10,Full_Episode
+33,244.9168,96.67,10,Full_Episode
+34,244.0969,90.00,10,Full_Episode
+35,72.5044,100.00,4,Early_Termination
+36,100.9364,100.00,5,Early_Termination
+37,101.3216,100.00,5,Early_Termination
+38,128.4416,100.00,6,Early_Termination
+39,243.6445,93.33,10,Full_Episode
+40,245.4934,96.67,10,Full_Episode
+41,102.0566,100.00,5,Early_Termination
+42,102.4961,100.00,5,Early_Termination
+43,244.5673,90.00,10,Full_Episode
+44,72.5970,100.00,4,Early_Termination
+45,247.1876,96.67,10,Full_Episode
+46,158.8519,100.00,7,Early_Termination
+47,244.8449,96.67,10,Full_Episode
+48,244.7789,96.67,10,Full_Episode
+49,240.9037,86.67,10,Full_Episode
+50,244.5105,93.33,10,Full_Episode
+
+============================================================
+FINAL TEST SUMMARY
+============================================================
+Total Episodes Tested: 50
+Average Reward: 176.9018
+Average Completion Rate: 97.33%
+Best Episode Reward: 247.9561
+Worst Episode Reward: 72.0083
+Best Completion Rate: 100.00%
+Worst Completion Rate: 86.67%
+Reward Standard Deviation: 72.9856
+Completion Rate Standard Deviation: 3.27%

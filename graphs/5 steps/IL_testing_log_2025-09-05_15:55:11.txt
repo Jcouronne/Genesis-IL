@@ -1,0 +1,13 @@
+
+============================================================
+FINAL TEST SUMMARY
+============================================================
+Total Episodes Tested: 50
+Average Reward: 94.0808
+Average Completion Rate: 97.73%
+Best Episode Reward: 103.2635
+Worst Episode Reward: 71.7795
+Best Completion Rate: 100.00%
+Worst Completion Rate: 90.00%
+Reward Standard Deviation: 12.5036
+Completion Rate Standard Deviation: 2.94%

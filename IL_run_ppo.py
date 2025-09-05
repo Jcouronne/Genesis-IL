@@ -102,6 +102,48 @@ def IL_run(env, RL_ppo_agent, IL_agent, num_episodes):
     plt.ion()
     figure, axis = plt.subplots(2, 2, figsize=(15, 10))
     
+    # Save hyperparameters once at the beginning
+    os.makedirs("graphs", exist_ok=True)
+    ts_start = time.time()
+    timestamp_start = datetime.fromtimestamp(ts_start).strftime('%Y-%m-%d_%H:%M:%S')
+    hyperparams_filename = f"graphs/IL_hyperparameters_{timestamp_start}.txt"
+    
+    # Create the main data file for all episodes
+    data_filename = f"graphs/IL_raw_episode_data_{timestamp_start}.txt"
+    
+    with open(hyperparams_filename, 'w') as f:
+        f.write("=== Imitation Learning Training Hyperparameters ===\n")
+        f.write(f"Training Started: {timestamp_start}\n\n")
+        f.write(f"Learning Rate: {lr}\n")
+        f.write(f"Gamma: {gamma}\n")
+        f.write(f"Clip Epsilon: {clip_epsilon}\n")
+        f.write(f"Number of Layers: {num_layers}\n")
+        f.write(f"Hidden Dimension: {hidden_dim}\n")
+        f.write(f"Number of Episodes: {num_episodes}\n")
+        f.write(f"Number of Environments: {args.num_envs}\n")
+        f.write(f"Task: {args.task}\n")
+        f.write(f"Device: {args.device}\n")
+        f.write(f"Collection Frequency: {collect_frequency}\n")
+    
+    # Initialize the data file with header
+    with open(data_filename, 'w') as f:
+        f.write("=== Imitation Learning Raw Episode Data ===\n")
+        f.write(f"Training Started: {timestamp_start}\n")
+        f.write(f"Number of Environments: {args.num_envs}\n\n")
+        
+        # Write header with format: Learner Loss env 1,Learner Rewards env 1,Learner Dones env 1,Expert Rewards env 1,Expert Dones env 1,Learner Loss env 2...
+        header_parts = []
+        for env_idx in range(args.num_envs):
+            header_parts.append(f"Learner Loss env {env_idx+1}")
+            header_parts.append(f"Learner Rewards env {env_idx+1}")
+            header_parts.append(f"Learner Dones env {env_idx+1}")
+            header_parts.append(f"Expert Rewards env {env_idx+1}")
+            header_parts.append(f"Expert Dones env {env_idx+1}")
+        f.write(",".join(header_parts) + "\n")
+    
+    print(f"Hyperparameters saved to: {hyperparams_filename}")
+    print(f"Episode data will be saved to: {data_filename}")
+    
     for episode in range(num_episodes):
         print("Starting episode:", episode + 1)
         # Collect RL demonstration
@@ -110,6 +152,8 @@ def IL_run(env, RL_ppo_agent, IL_agent, num_episodes):
         
         episode_RL_states = []
         episode_RL_actions = []
+        episode_RL_rewards = []  # Store rewards per step for per-env tracking
+        episode_RL_dones = []    # Store dones per step for per-env tracking
         RL_total_reward = 0
         
         # Expert generates demonstration
@@ -120,12 +164,13 @@ def IL_run(env, RL_ppo_agent, IL_agent, num_episodes):
             # Store RL demonstration
             episode_RL_states.append(RL_state.clone())
             episode_RL_actions.append(RL_action.clone())
+            episode_RL_rewards.append(RL_reward.clone())  # Store per-environment rewards
+            episode_RL_dones.append(RL_done.clone())      # Store per-environment dones
 
             RL_state = RL_next_state
             RL_total_reward += RL_reward.sum().item()
-            RL_done_array = torch.logical_or(RL_done_array, RL_done)
+            RL_done_array = RL_done
 
-            # Early termination if all environments are done
             if RL_done_array.all():
                 break
 
@@ -160,6 +205,28 @@ def IL_run(env, RL_ppo_agent, IL_agent, num_episodes):
             IL_rewards_stats.append(IL_reward)
             IL_done_stats.append(IL_completion)
             RL_done_stats.append(RL_completion_rate)
+            
+            # Test IL agent to get per-environment data
+            IL_per_env_rewards, IL_per_env_completions = test_IL_per_environment(IL_agent, env)
+            
+            # Get RL per-environment data from the current episode
+            RL_per_env_rewards, RL_per_env_completions = get_RL_per_environment_data(episode_RL_rewards, RL_done_array, env.num_envs)
+            
+            # Append current episode data to the main data file
+            with open(data_filename, 'a') as f:
+                # Create row with format: Learner Loss env1, Learner Rewards env1, Learner Dones env1, Expert Rewards env1, Expert Dones env1, Learner Loss env2...
+                row_data = []
+                for env_idx in range(args.num_envs):
+                    # Use actual per-environment data instead of replicating single values
+                    row_data.append(f"{avg_loss:.6f}")  # Learner Loss (same for all envs)
+                    row_data.append(f"{IL_per_env_rewards[env_idx]:.6f}")  # Learner Rewards per env
+                    row_data.append(f"{IL_per_env_completions[env_idx]:.6f}")  # Learner Dones per env
+                    row_data.append(f"{RL_per_env_rewards[env_idx]:.6f}")  # Expert Rewards per env
+                    row_data.append(f"{RL_per_env_completions[env_idx]:.6f}")  # Expert Dones per env
+                
+                f.write(",".join(row_data) + "\n")
+            
+            print(f"Episode {episode} data appended to: {data_filename}")
             
             # Clear buffer to manage memory
             RL_states_buffer = RL_states_buffer[-100:]  # Keep recent 100 samples
@@ -196,6 +263,24 @@ def IL_run(env, RL_ppo_agent, IL_agent, num_episodes):
     plot_IL_results(episode_stats, IL_loss_stats, RL_rewards_stats, IL_rewards_stats, 
                    IL_done_stats, RL_done_stats, lr, num_layers, hidden_dim, 
                    total_minutes, total_seconds)
+    
+    # Save final comprehensive training data
+    ts = time.time()
+    timestamp = datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
+    final_data_filename = f"graphs/final_IL_raw_data_{timestamp}.txt"
+    with open(final_data_filename, 'w') as f:
+        f.write("=== FINAL Imitation Learning Raw Training Data ===\n")
+        f.write(f"Timestamp: {timestamp}\n")
+        f.write(f"Total Episodes: {num_episodes}\n")
+        f.write(f"Total Runtime: {total_minutes}m {total_seconds}s\n")
+        f.write(f"Training Efficiency: {total_elapsed/num_episodes:.2f} seconds per episode\n\n")
+        
+        f.write("=== Complete Raw Episode Data ===\n")
+        f.write("Episode,IL_Loss,IL_Reward,IL_Completion(%),Expert_Reward,Expert_Completion(%)\n")
+        for i, ep in enumerate(episode_stats):
+            f.write(f"{ep},{IL_loss_stats[i]:.6f},{IL_rewards_stats[i]:.4f},{IL_done_stats[i]:.2f},{RL_rewards_stats[i]:.4f},{RL_done_stats[i]:.2f}\n")
+    
+    print(f"Final IL raw training data saved to: {final_data_filename}")
 
 def test_IL_performance(IL_agent, env, num_test_episodes=3, verbose=False):
     """Test IL agent performance during training"""
@@ -215,7 +300,7 @@ def test_IL_performance(IL_agent, env, num_test_episodes=3, verbose=False):
             IL_next_state, IL_reward, IL_done = env.step(IL_action)
             IL_total_reward += IL_reward.sum().item()
             IL_state = IL_next_state
-            IL_done_array = torch.logical_or(IL_done_array, IL_done)
+            IL_done_array = IL_done
 
             if IL_done_array.all():
                 break
@@ -233,6 +318,46 @@ def test_IL_performance(IL_agent, env, num_test_episodes=3, verbose=False):
         print(f"IL Agent Average Completion Rate: {IL_avg_completion:.2f}%")
 
     return IL_avg_reward, IL_avg_completion
+
+def test_IL_per_environment(IL_agent, env, num_test_episodes=1):
+    """Test IL agent performance and return per-environment data"""
+    IL_agent.model.eval()
+    
+    # Run single test episode to get per-environment performance
+    IL_state = env.reset()
+    IL_per_env_rewards = torch.zeros(env.num_envs).to(args.device)
+    IL_done_array = torch.tensor([False] * env.num_envs).to(args.device)
+
+    for step in range(5):
+        IL_action = IL_agent.select_action(IL_state)
+        IL_next_state, IL_reward, IL_done = env.step(IL_action)
+        IL_per_env_rewards += IL_reward  # Accumulate rewards per environment
+        IL_state = IL_next_state
+        IL_done_array = IL_done
+
+        if IL_done_array.all():
+            break
+
+    # Convert to per-environment completion rates (0 or 100 for each env)
+    IL_per_env_completions = IL_done_array.float() * 100.0
+    
+    # Convert to CPU and return as lists
+    return IL_per_env_rewards.cpu().tolist(), IL_per_env_completions.cpu().tolist()
+
+def get_RL_per_environment_data(episode_RL_rewards, RL_done_array, num_envs):
+    """Extract per-environment data from RL episode using stored step data"""
+    # Sum rewards per environment across all steps
+    RL_per_env_rewards = torch.zeros(num_envs).to(RL_done_array.device)
+    
+    # Accumulate rewards per environment across all steps
+    for step_rewards in episode_RL_rewards:
+        RL_per_env_rewards += step_rewards
+    
+    # Convert completion status to percentages (0 or 100 per environment)
+    RL_per_env_completions = (RL_done_array.float() * 100.0)
+    
+    # Convert to CPU and return as lists
+    return RL_per_env_rewards.cpu().tolist(), RL_per_env_completions.cpu().tolist()
 
 def update_IL_plots(axis, episodes, losses, RL_rewards, IL_rewards, IL_done_rates, RL_done_rates,
                     lr, num_layers, hidden_dim, elapsed_minutes, elapsed_seconds):
@@ -501,8 +626,14 @@ def run_IL_test_suite(env, IL_agent, args):
     """Run test suite for IL model - 50 episodes"""
     print("\n" + "-" * 40)
     
+    # Create testing log file
+    os.makedirs("graphs", exist_ok=True)
+    ts_test = time.time()
+    timestamp_test = datetime.fromtimestamp(ts_test).strftime('%Y-%m-%d_%H:%M:%S')
+    test_log_filename = f"graphs/IL_testing_log_{timestamp_test}.txt"
+    
     # Simple test: 50 episodes
-    episode_rewards, episode_completions = test_IL_simple_performance(IL_agent, env, args, num_episodes=50)
+    episode_rewards, episode_completions = test_IL_simple_performance(IL_agent, env, args, num_episodes=50, log_file=test_log_filename)
 
     # Plot test results
     plot_test_results(episode_rewards, episode_completions, args)
@@ -515,25 +646,58 @@ def run_IL_test_suite(env, IL_agent, args):
     print(f"  Average Reward: {avg_reward:.2f}")
     print(f"  Average Completion Rate: {avg_completion:.1f}%")
     print(f"  Total Episodes: {len(episode_rewards)}")
+    
+    # Save final test summary
+    with open(test_log_filename, 'a') as f:
+        f.write("\n" + "="*60 + "\n")
+        f.write("FINAL TEST SUMMARY\n")
+        f.write("="*60 + "\n")
+        f.write(f"Total Episodes Tested: {len(episode_rewards)}\n")
+        f.write(f"Average Reward: {avg_reward:.4f}\n")
+        f.write(f"Average Completion Rate: {avg_completion:.2f}%\n")
+        f.write(f"Best Episode Reward: {max(episode_rewards):.4f}\n")
+        f.write(f"Worst Episode Reward: {min(episode_rewards):.4f}\n")
+        f.write(f"Best Completion Rate: {max(episode_completions):.2f}%\n")
+        f.write(f"Worst Completion Rate: {min(episode_completions):.2f}%\n")
+        f.write(f"Reward Standard Deviation: {np.std(episode_rewards):.4f}\n")
+        f.write(f"Completion Rate Standard Deviation: {np.std(episode_completions):.2f}%\n")
+    
+    print(f"\nDetailed testing log saved to: {test_log_filename}")
 
-def test_IL_simple_performance(IL_agent, env, args, num_episodes=50):
+def test_IL_simple_performance(IL_agent, env, args, num_episodes=50, log_file=None):
     """Simple test IL agent performance over episodes"""
     IL_agent.model.eval()
     episode_rewards = []
     episode_completions = []
+    
+    # Initialize log file if provided
+    if log_file:
+        with open(log_file, 'w') as f:
+            f.write("=== Imitation Learning Testing Log ===\n")
+            f.write(f"Testing Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Task: {args.task}\n")
+            f.write(f"Number of Environments: {args.num_envs}\n")
+            f.write(f"Total Test Episodes: {num_episodes}\n")
+            f.write(f"Device: {args.device}\n")
+            f.write("\n" + "="*60 + "\n")
+            f.write("DETAILED EPISODE RESULTS\n")
+            f.write("="*60 + "\n")
+            f.write("Episode,Reward,Completion_Rate(%),Steps_Taken,Notes\n")
     
     print("   Running simple performance test...")
     for episode in range(num_episodes):
         IL_state = env.reset()
         IL_total_reward = 0
         IL_done_array = torch.tensor([False] * env.num_envs).to(args.device)
+        steps_taken = 0
         
-        for step in range(10):
+        for step in range(5):
             IL_action = IL_agent.select_action(IL_state)
             IL_next_state, IL_reward, IL_done = env.step(IL_action)
             IL_total_reward += IL_reward.sum().item()
             IL_state = IL_next_state
-            IL_done_array = torch.logical_or(IL_done_array, IL_done)
+            IL_done_array = IL_done
+            steps_taken = step + 1
             print(IL_done_array)
             if IL_done_array.all():
                 break
@@ -541,6 +705,12 @@ def test_IL_simple_performance(IL_agent, env, args, num_episodes=50):
         episode_rewards.append(IL_total_reward)
         completion_rate = (IL_done_array.sum().item() / env.num_envs) * 100.0
         episode_completions.append(completion_rate)
+        
+        # Log to file if provided
+        if log_file:
+            notes = "Early_Termination" if IL_done_array.all() and steps_taken < 10 else "Full_Episode"
+            with open(log_file, 'a') as f:
+                f.write(f"{episode+1},{IL_total_reward:.4f},{completion_rate:.2f},{steps_taken},{notes}\n")
         
         if (episode + 1) % 10 == 0:
             print(f"   Episode {episode+1}: Reward={IL_total_reward:.2f}, Completion={completion_rate:.1f}%")
